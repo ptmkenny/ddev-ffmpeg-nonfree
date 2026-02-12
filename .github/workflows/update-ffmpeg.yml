@@ -1,0 +1,49 @@
+name: Update ffmpeg version
+
+on:
+  schedule:
+    - cron: '0 9 * * 5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for new ffmpeg version
+        id: check
+        run: |
+          CURRENT=$(grep -oP '^ARG FFMPEG_VERSION=\K.*' web-build/Dockerfile.ffmpeg-nonfree)
+          LATEST=$(curl -sL https://ffmpeg.org/releases/ \
+            | grep -oP 'ffmpeg-\K[0-9]+\.[0-9]+(\.[0-9]+)?(?=\.tar)' \
+            | sort -V | tail -1)
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT" != "$LATEST" ] && [ -n "$LATEST" ]; then
+            echo "update=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "update=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update Dockerfile
+        if: steps.check.outputs.update == 'true'
+        run: |
+          sed -i "s/^ARG FFMPEG_VERSION=.*/ARG FFMPEG_VERSION=${{ steps.check.outputs.latest }}/" \
+            web-build/Dockerfile.ffmpeg-nonfree
+
+      - name: Create pull request
+        if: steps.check.outputs.update == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "Update ffmpeg to ${{ steps.check.outputs.latest }}"
+          title: "Update ffmpeg to ${{ steps.check.outputs.latest }}"
+          body: |
+            Automated update: ffmpeg ${{ steps.check.outputs.current }} -> ${{ steps.check.outputs.latest }}
+
+            Release notes: https://ffmpeg.org/releases/
+          branch: update-ffmpeg-${{ steps.check.outputs.latest }}

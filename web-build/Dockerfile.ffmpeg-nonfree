@@ -29,7 +29,7 @@ RUN LATEST=$(wget -qO- https://ffmpeg.org/releases/ \
     if [ -n "$LATEST" ] && [ "$LATEST" != "$FFMPEG_VERSION" ]; then \
       echo "##########################################################"; \
       echo "# WARNING: ffmpeg $FFMPEG_VERSION is pinned but $LATEST is available."; \
-      echo "# Update FFMPEG_VERSION in Dockerfile.ffmpeg-nonfree."; \
+      echo "# Run: ddev add-on get ptmkenny/ddev-ffmpeg-nonfree"; \
       echo "##########################################################"; \
     fi \
     || true
