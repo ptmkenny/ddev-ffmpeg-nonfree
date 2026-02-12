@@ -1,6 +1,9 @@
 name: ffmpeg-nonfree
 
 project_files:
-  - docker-compose.ffmpeg-nonfree.yaml
+  - web-build/Dockerfile.ffmpeg-nonfree
+
+removal_actions:
+  - rm -f web-build/Dockerfile.ffmpeg-nonfree
 
 ddev_version_constraint: '>= v1.24.3'

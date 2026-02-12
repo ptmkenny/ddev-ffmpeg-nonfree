@@ -3,11 +3,13 @@
 [![last commit](https://img.shields.io/github/last-commit/ptmkenny/ddev-ffmpeg-nonfree)](https://github.com/ptmkenny/ddev-ffmpeg-nonfree/commits)
 [![release](https://img.shields.io/github/v/release/ptmkenny/ddev-ffmpeg-nonfree)](https://github.com/ptmkenny/ddev-ffmpeg-nonfree/releases/latest)
 
-# DDEV Ffmpeg Nonfree
+# DDEV ffmpeg-nonfree
 
-## Overview
+Builds ffmpeg from source inside the DDEV web container with `--enable-nonfree --enable-libfdk-aac`.
 
-This add-on integrates Ffmpeg Nonfree into your [DDEV](https://ddev.com/) project.
+## Why?
+
+Debian's packaged ffmpeg excludes `libfdk_aac` because the Fraunhofer FDK AAC license is incompatible with the GPL. This add-on compiles ffmpeg from source, linking against Debian's `libfdk-aac-dev` (from the `non-free` apt component), so you get a fully functional AAC encoder inside your DDEV project.
 
 ## Installation
 
@@ -16,33 +18,21 @@ ddev add-on get ptmkenny/ddev-ffmpeg-nonfree
 ddev restart
 ```
 
-After installation, make sure to commit the `.ddev` directory to version control.
+The first `ddev restart` after installation will be slow because ffmpeg is compiled from source inside the web container.
+
+After installation, commit the `.ddev` directory to version control.
 
 ## Usage
 
-| Command | Description |
-| ------- | ----------- |
-| `ddev describe` | View service status and used ports for Ffmpeg Nonfree |
-| `ddev logs -s ffmpeg-nonfree` | Check Ffmpeg Nonfree logs |
-
-## Advanced Customization
-
-To change the Docker image:
+ffmpeg runs inside the web container:
 
 ```bash
-ddev dotenv set .ddev/.env.ffmpeg-nonfree --ffmpeg-nonfree-docker-image="ddev/ddev-utilities:latest"
-ddev add-on get ptmkenny/ddev-ffmpeg-nonfree
-ddev restart
+ddev exec ffmpeg -version
+ddev exec ffmpeg -i input.wav -c:a libfdk_aac -b:a 128k output.m4a
 ```
-
-Make sure to commit the `.ddev/.env.ffmpeg-nonfree` file to version control.
-
-All customization options (use with caution):
-
-| Variable | Flag | Default |
-| -------- | ---- | ------- |
-| `FFMPEG_NONFREE_DOCKER_IMAGE` | `--ffmpeg-nonfree-docker-image` | `ddev/ddev-utilities:latest` |
 
 ## Credits
 
 **Contributed and maintained by [@ptmkenny](https://github.com/ptmkenny)**
+
+Part of the code for this add-on was generated with [Claude Code](https://claude.ai/claude-code).

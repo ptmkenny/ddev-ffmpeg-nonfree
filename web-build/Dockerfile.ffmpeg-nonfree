@@ -1,0 +1,78 @@
+#ddev-generated
+# Build ffmpeg with libfdk_aac support.
+# The standard Debian ffmpeg package does not include libfdk_aac (non-free).
+# We compile from source, linking against Debian's own libfdk-aac library.
+
+# Enable non-free component for libfdk-aac-dev.
+RUN if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+        sed -i 's/^Components: main$/Components: main non-free/' /etc/apt/sources.list.d/debian.sources; \
+    elif [ -f /etc/apt/sources.list ]; then \
+        sed -i 's/main$/main non-free/' /etc/apt/sources.list; \
+    fi
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    build-essential \
+    libfdk-aac-dev \
+    libmp3lame-dev \
+    libopus-dev \
+    nasm \
+    pkg-config \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG FFMPEG_VERSION=8.0.1
+
+# Warn at build time if a newer ffmpeg release exists.
+RUN LATEST=$(wget -qO- https://ffmpeg.org/releases/ \
+      | grep -oP 'ffmpeg-\K[0-9]+\.[0-9]+(\.[0-9]+)?(?=\.tar)' \
+      | sort -V | tail -1) && \
+    if [ -n "$LATEST" ] && [ "$LATEST" != "$FFMPEG_VERSION" ]; then \
+      echo "##########################################################"; \
+      echo "# WARNING: ffmpeg $FFMPEG_VERSION is pinned but $LATEST is available."; \
+      echo "# Update FFMPEG_VERSION in Dockerfile.ffmpeg-nonfree."; \
+      echo "##########################################################"; \
+    fi \
+    || true
+
+RUN cd /tmp && \
+    wget -q https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz && \
+    tar xf ffmpeg-${FFMPEG_VERSION}.tar.xz && \
+    cd ffmpeg-${FFMPEG_VERSION} && \
+    ./configure \
+        --prefix=/usr/local \
+        --enable-gpl \
+        --enable-nonfree \
+        --enable-libfdk-aac \
+        --enable-libmp3lame \
+        --enable-libopus \
+        --disable-doc \
+        --disable-debug \
+        --disable-ffplay \
+        --disable-network \
+        --disable-autodetect \
+    && make -j$(nproc) \
+    && make install \
+    && cd / && rm -rf /tmp/ffmpeg-*
+
+# Remove build-time dependencies to reduce image size.
+# Use purge without --auto-remove: the runtime shared libraries
+# (libfdk-aac2, libmp3lame0, libopus0) were auto-installed as
+# dependencies of the -dev packages. --auto-remove would cascade
+# and delete them too, leaving ffmpeg unable to find libfdk-aac.so.
+RUN apt-get purge -y \
+    build-essential \
+    libfdk-aac-dev \
+    libmp3lame-dev \
+    libopus-dev \
+    nasm \
+    pkg-config \
+    wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Revert non-free component.
+RUN if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+        sed -i 's/^Components: main non-free$/Components: main/' /etc/apt/sources.list.d/debian.sources; \
+    elif [ -f /etc/apt/sources.list ]; then \
+        sed -i 's/main non-free$/main/' /etc/apt/sources.list; \
+    fi

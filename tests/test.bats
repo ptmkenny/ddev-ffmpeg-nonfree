@@ -39,17 +39,15 @@ setup() {
 }
 
 health_checks() {
-  # Do something useful here that verifies the add-on
-
-  # You can check for specific information in headers:
-  # run curl -sfI https://${PROJNAME}.ddev.site
-  # assert_output --partial "HTTP/2 200"
-  # assert_output --partial "test_header"
-
-  # Or check if some command gives expected output:
-  DDEV_DEBUG=true run ddev launch
+  # Verify ffmpeg is installed and reports correct version
+  run ddev exec ffmpeg -version
   assert_success
-  assert_output --partial "FULLURL https://${PROJNAME}.ddev.site"
+  assert_output --partial "ffmpeg version"
+
+  # Verify libfdk_aac encoder is available
+  run ddev exec ffmpeg -encoders
+  assert_success
+  assert_output --partial "libfdk_aac"
 }
 
 teardown() {
